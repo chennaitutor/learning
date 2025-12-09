@@ -13,7 +13,7 @@ import subprocess
 import tempfile
 import wave
 from pathlib import Path
-from typing import Tuple
+from typing import Optional, Tuple
 
 from PIL import Image, ImageDraw
 
@@ -154,26 +154,70 @@ def assemble_video(frames_dir: str, audio_path: Path, fps: int, output: Path, in
     subprocess.run(cmd, check=True)
 
 
-def main() -> None:
-    args = parse_args()
+def create_talking_photo(
+    image_path: Path,
+    output_path: Path,
+    *,
+    fps: int = 12,
+    mouth_color: str = "#e74c3c",
+    include_audio: bool = True,
+    text: Optional[str] = None,
+    audio_path: Optional[Path] = None,
+) -> Path:
+    """Generate a talking photo video from an image and either text or audio.
+
+    Args:
+        image_path: Path to the source image.
+        output_path: Target path for the resulting MP4.
+        fps: Animation frame rate.
+        mouth_color: Color for the animated mouth overlay.
+        include_audio: Whether to mux audio into the resulting video.
+        text: Text to synthesize to speech.
+        audio_path: Path to an input audio file.
+
+    Returns:
+        Path to the created video.
+
+    Raises:
+        TalkingPhotoError: If inputs are invalid or dependencies are missing.
+    """
+
+    if (text is None and audio_path is None) or (text is not None and audio_path is not None):
+        raise TalkingPhotoError("Provide exactly one of text or audio input")
+
     ensure_ffmpeg()
 
     temp_dir = tempfile.mkdtemp(prefix="talking_photo_")
+    frames_dir = None
     wav_audio = Path(temp_dir) / "speech.wav"
 
     try:
-        if args.text:
-            synthesize_text_to_audio(args.text, wav_audio)
+        if text:
+            synthesize_text_to_audio(text, wav_audio)
         else:
-            convert_audio_to_wav(args.audio, wav_audio)
+            convert_audio_to_wav(audio_path, wav_audio)
 
-        frames_dir, _ = build_frames(args.image, wav_audio, args.fps, args.mouth_color)
-        assemble_video(frames_dir, wav_audio, args.fps, args.output, args.include_audio)
-        print(f"Saved talking photo to {args.output}")
+        frames_dir, _ = build_frames(image_path, wav_audio, fps, mouth_color)
+        assemble_video(frames_dir, wav_audio, fps, output_path, include_audio)
+        return output_path
     finally:
         shutil.rmtree(temp_dir, ignore_errors=True)
-        if 'frames_dir' in locals():
+        if frames_dir:
             shutil.rmtree(frames_dir, ignore_errors=True)
+
+
+def main() -> None:
+    args = parse_args()
+    output = create_talking_photo(
+        args.image,
+        args.output,
+        fps=args.fps,
+        mouth_color=args.mouth_color,
+        include_audio=args.include_audio,
+        text=args.text,
+        audio_path=args.audio,
+    )
+    print(f"Saved talking photo to {output}")
 
 
 if __name__ == "__main__":  # pragma: no cover - CLI entry point

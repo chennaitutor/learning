@@ -3,7 +3,8 @@
 This repository contains a lightweight Python script that turns a still image
 into a short talking-head style clip. Provide an image plus either a spoken
 audio track or text to synthesize, and the script will animate a simple mouth
-shape and optionally mux the audio into the generated MP4.
+shape and optionally mux the audio into the generated MP4. A minimal web UI is
+also provided for easy uploading and downloading.
 
 > This is a prototype with a toy visual effect—it does **not** perform true lip
 > syncing, but it is an easy way to experiment locally without downloading large
@@ -31,6 +32,21 @@ shape and optionally mux the audio into the generated MP4.
 
 4. If you only want the animated mouth without audio muxed into the video,
    omit the `--include-audio` flag.
+
+## Run the web interface
+
+Start a local Flask server to interact through a browser-friendly form that
+accepts image, text, or audio uploads and returns the generated MP4 for
+download:
+
+```bash
+export FLASK_APP=app.py
+flask run --port 5000
+```
+
+Then visit http://127.0.0.1:5000/ to upload an image and either enter text or
+attach an audio file. You can tweak frames-per-second, mouth color, and whether
+audio is muxed directly from the page.
 
 The script requires `ffmpeg` on your PATH. On most Linux distributions you can
 install it via your system package manager.
